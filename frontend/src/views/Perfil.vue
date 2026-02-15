@@ -12,6 +12,7 @@ const usuario = ref({
     nombre: '',
     apellido: '',
     ci: '',
+    email: '', // 📧 Campo de email añadido
     username: '',
     rol: '',
     imagen: null,
@@ -51,16 +52,16 @@ const actualizarPerfil = async () => {
     cargando.value = true;
     const formData = new FormData();
 
-    // Solo mandamos lo que el Serializer permite escribir
+    // Campos obligatorios y nuevos
     formData.append('nombre', usuario.value.nombre);
     formData.append('apellido', usuario.value.apellido);
+    formData.append('email', usuario.value.email); // 📧 Enviando el email actualizado
 
     if (nuevaImagen.value) {
         formData.append('imagen', nuevaImagen.value);
     }
 
     // 🔐 GESTIÓN DE CONTRASEÑA:
-    // Solo la incluimos si el usuario escribió algo en el campo nuevo
     if (passwordNuevo.value) {
         formData.append('password', passwordNuevo.value);
     }
@@ -83,7 +84,19 @@ const actualizarPerfil = async () => {
         });
     } catch (error) {
         console.error("Error backend:", error.response?.data);
-        Swal.fire('Error', 'No se pudo actualizar el perfil. Revisa los datos.', 'error');
+
+        let errorMsg = 'No se pudo actualizar el perfil.';
+        if (error.response?.data?.email) {
+            errorMsg = "Ese correo electrónico ya está en uso.";
+        }
+
+        Swal.fire({
+            title: 'Error',
+            text: errorMsg,
+            icon: 'error',
+            background: '#0a0a10',
+            color: '#fff'
+        });
     } finally {
         cargando.value = false;
     }
@@ -123,7 +136,7 @@ const actualizarPerfil = async () => {
 
                         <h3 class="text-xl font-black text-white uppercase tracking-tighter">{{ usuario.username }}</h3>
                         <p class="text-rose-500 text-[10px] font-black uppercase tracking-[0.2em] mb-4">{{ usuario.rol
-                            }}</p>
+                        }}</p>
 
                         <div class="bg-white/5 rounded-2xl p-4 text-left space-y-3">
                             <div>
@@ -134,6 +147,10 @@ const actualizarPerfil = async () => {
                             <div>
                                 <p class="text-[8px] text-gray-500 font-black uppercase">Documento</p>
                                 <p class="text-xs text-white font-bold">{{ usuario.ci }}</p>
+                            </div>
+                            <div>
+                                <p class="text-[8px] text-gray-500 font-black uppercase">Correo Electrónico</p>
+                                <p class="text-[10px] text-rose-400 font-bold break-all">{{ usuario.email }}</p>
                             </div>
                         </div>
                     </div>
@@ -156,6 +173,14 @@ const actualizarPerfil = async () => {
                                     <input v-model="usuario.apellido" type="text"
                                         class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white text-xs font-bold outline-none focus:border-rose-500/50 transition-all">
                                 </div>
+                            </div>
+
+                            <div class="space-y-2">
+                                <label class="text-[10px] font-black text-rose-500 uppercase tracking-widest">Correo
+                                    Electrónico</label>
+                                <input v-model="usuario.email" type="email"
+                                    class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white text-xs font-bold outline-none focus:border-rose-500/50 transition-all shadow-inner"
+                                    placeholder="ejemplo@correo.com">
                             </div>
 
                             <div class="p-8 bg-rose-600/5 border border-rose-600/10 rounded-3xl space-y-6">

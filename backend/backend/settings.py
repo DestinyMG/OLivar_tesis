@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'preregistro',
     'incidencias',
+    'notificaciones',
 
 ]
 
@@ -156,3 +157,11 @@ SIMPLE_JWT = {
 
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
 }
+
+# Configuración de Email (SMTP de Gmail)
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_USE_TLS = True
+EMAIL_PORT = 587
+EMAIL_HOST_USER = 'dgb0609@gmail.com' # Tu correo real
+EMAIL_HOST_PASSWORD = 'mnvs nbny fhxn ikbi'

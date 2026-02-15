@@ -3,7 +3,9 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
 import Swal from 'sweetalert2';
+import ForgotPasswordModal from './ForgotPasswordModal.vue';
 
+const showRecovery = ref(false);
 const router = useRouter();
 const isLogin = ref(true);
 const showPassword = ref(false);
@@ -12,16 +14,36 @@ const showPassword = ref(false);
 const subprogramas = ref([]);
 const loadingSubprogramas = ref(false);
 
+// Nuevo estado para el prefijo de CI
+const nacionalidad = ref('V-');
+
 const form = ref({
     nombre: '',
     apellido: '',
-    ci: '',
+    ci: '', // Solo guardará los números
+    email: '',
     user: '',
     password: '',
     subprograma_id: ''
 });
 
-// Cargar subprogramas desde la API
+// --- VALIDACIONES ---
+
+// Bloquear cualquier tecla que no sea número
+const validarSoloNumeros = (event) => {
+    const charCode = event.which ? event.which : event.keyCode;
+    if (charCode > 31 && (charCode < 48 || charCode > 57)) {
+        event.preventDefault();
+    }
+};
+
+// Validar formato de nombre/apellido (solo letras)
+const validarSoloLetras = (event) => {
+    if (!/[a-zA-ZáéíóúÁÉÍÓÚñÑ ]/.test(event.key)) {
+        event.preventDefault();
+    }
+};
+
 const fetchSubprogramas = async () => {
     loadingSubprogramas.value = true;
     try {
@@ -34,24 +56,32 @@ const fetchSubprogramas = async () => {
     }
 };
 
-// Cambiar entre login y registro
 const toggleAuth = () => {
     isLogin.value = !isLogin.value;
     showPassword.value = false;
     if (!isLogin.value && subprogramas.value.length === 0) fetchSubprogramas();
 };
 
-// --- Función de Submit ---
 const handleSubmit = async () => {
+    // Validación de longitud mínima de CI
+    if (!isLogin.value && form.value.ci.length < 6) {
+        Swal.fire({
+            title: 'CI Inválida',
+            text: 'La cédula debe tener al menos 6 dígitos',
+            icon: 'warning',
+            background: '#1a1a2e',
+            color: '#fff'
+        });
+        return;
+    }
+
     try {
         if (isLogin.value) {
-            // --- Login ---
             const loginData = {
                 username: form.value.user,
                 password: form.value.password
             };
 
-            // --- SweetAlert de carga ---
             Swal.fire({
                 title: 'Iniciando sesión...',
                 html: '<div class="loader"></div><p class="mt-3">Por favor espere</p>',
@@ -65,7 +95,6 @@ const handleSubmit = async () => {
             const response = await axios.post('http://localhost:8000/api1/auth/token/', loginData);
             Swal.close();
 
-            // ✅ Guardar token y todos los datos del usuario
             const usuario = response.data.usuario;
             localStorage.setItem('access_token', response.data.access);
             localStorage.setItem('usuario_id', usuario.id);
@@ -75,18 +104,19 @@ const handleSubmit = async () => {
             localStorage.setItem('usuario_rol', usuario.rol);
             localStorage.setItem('usuario_sub_programa', usuario.sub_programa || '');
 
-
-            // Redirigir al panel de incidencias
             window.location.href = 'http://localhost:5173/incidencias';
 
         } else {
-            // --- Preregistro ---
             const subSelected = subprogramas.value.find(s => s.id == form.value.subprograma_id);
+
+            // Unimos el prefijo con el número para el envío
+            const ciCompleta = `${nacionalidad.value}${form.value.ci}`;
 
             const dataToRegister = {
                 nombre: form.value.nombre,
                 apellido: form.value.apellido,
-                ci: form.value.ci,
+                ci: ciCompleta,
+                email: form.value.email,
                 username: form.value.user,
                 password: form.value.password,
                 sub_programa: subSelected ? subSelected.nombre : '',
@@ -110,46 +140,34 @@ const handleSubmit = async () => {
 
             Swal.fire({
                 title: '¡Solicitud Enviada!',
-                text: 'Tu preregistro se ha realizado con éxito. Por favor, espera la confirmación del administrador.',
+                text: 'Tu preregistro se ha realizado con éxito. Espera confirmación.',
                 icon: 'success',
                 background: '#1a1a2e',
                 color: '#fff',
-                confirmButtonColor: '#00ffff',
-                confirmButtonText: 'Entendido'
+                confirmButtonColor: '#00ffff'
             });
 
             isLogin.value = true;
-            form.value = { nombre: '', apellido: '', ci: '', user: '', password: '', subprograma_id: '' };
+            form.value = { nombre: '', apellido: '', ci: '', email: '', user: '', password: '', subprograma_id: '' };
         }
     } catch (error) {
         Swal.close();
-        console.error("Error:", error.response?.data);
+        let errorDetail = isLogin.value ? "Usuario o contraseña incorrecta" : "No se pudo procesar la solicitud.";
 
-        if (isLogin.value) {
-            Swal.fire({
-                title: 'Login Fallido',
-                text: 'Usuario o contraseña incorrecta',
-                icon: 'error',
-                background: '#1a1a2e',
-                color: '#fff',
-                confirmButtonColor: '#ff00ff'
-            });
-        } else {
-            let errorDetail = "No se pudo procesar la solicitud.";
-            if (error.response?.data) {
-                errorDetail = Object.entries(error.response.data)
-                    .map(([key, value]) => `${key}: ${value}`)
-                    .join('\n');
-            }
-            Swal.fire({
-                title: 'Fallo de Validación',
-                text: errorDetail,
-                icon: 'error',
-                background: '#1a1a2e',
-                color: '#fff',
-                confirmButtonColor: '#ff00ff'
-            });
+        if (error.response?.data) {
+            errorDetail = Object.entries(error.response.data)
+                .map(([key, value]) => `${key.toUpperCase()}: ${value}`)
+                .join('\n');
         }
+
+        Swal.fire({
+            title: isLogin.value ? 'Login Fallido' : 'Fallo de Validación',
+            text: errorDetail,
+            icon: 'error',
+            background: '#1a1a2e',
+            color: '#fff',
+            confirmButtonColor: '#ff00ff'
+        });
     }
 };
 
@@ -157,7 +175,6 @@ onMounted(() => {
     if (!isLogin.value) fetchSubprogramas();
 });
 </script>
-
 
 <template>
     <div class="neon-bg-container">
@@ -186,18 +203,34 @@ onMounted(() => {
                             <div class="input-container">
                                 <label>Nombre</label>
                                 <input v-model="form.nombre" type="text" placeholder="John" class="neon-input"
-                                    required />
+                                    @keypress="validarSoloLetras" required />
                             </div>
                             <div class="input-container">
                                 <label>Apellido</label>
                                 <input v-model="form.apellido" type="text" placeholder="Doe" class="neon-input"
-                                    required />
+                                    @keypress="validarSoloLetras" required />
                             </div>
                         </div>
 
                         <div class="input-container">
+                            <label>Correo Electrónico</label>
+                            <input v-model="form.email" type="email" placeholder="user@example.com" class="neon-input"
+                                required />
+                        </div>
+
+                        <div class="input-container">
                             <label>Cédula (CI)</label>
-                            <input v-model="form.ci" type="text" placeholder="V-000000" class="neon-input" required />
+                            <div class="flex gap-0 group">
+                                <select v-model="nacionalidad"
+                                    class="neon-input !w-20 !rounded-r-none border-r-0 text-center cursor-pointer appearance-none bg-[#1a1a2e]">
+                                    <option value="V-">V-</option>
+                                    <option value="E-">E-</option>
+                                </select>
+                                <input v-model="form.ci" type="text" maxlength="9" placeholder="00000000"
+                                    class="neon-input !rounded-l-none flex-1" @keypress="validarSoloNumeros" required />
+                            </div>
+                            <p class="text-[9px] text-cyan-400/60 mt-1 italic tracking-widest uppercase">Solo dígitos
+                                permitidos</p>
                         </div>
 
                         <div class="input-container">
@@ -229,7 +262,7 @@ onMounted(() => {
                             <input v-model="form.password" :type="showPassword ? 'text' : 'password'"
                                 placeholder="••••••••" class="neon-input pr-12" required />
                             <button type="button" @click="showPassword = !showPassword"
-                                class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-cyan-400 transition-colors cursor-pointer">
+                                class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-cyan-400 transition-colors">
                                 <svg v-if="!showPassword" xmlns="http://www.w3.org/2000/svg" width="18" height="18"
                                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -256,11 +289,18 @@ onMounted(() => {
                         {{ isLogin ? ">> Create New Access Code" : ">> Return to Login" }}
                     </button>
                 </div>
+                <div v-if="isLogin" class="mt-4 text-center">
+                    <button type="button" @click="showRecovery = true"
+                        class="text-[10px] text-gray-500 hover:text-cyan-400 transition-colors uppercase font-bold tracking-widest">
+                        ¿Olvidaste tu contraseña?
+                    </button>
+                </div>
+
+                <ForgotPasswordModal :show="showRecovery" @close="showRecovery = false" />
             </div>
         </div>
     </div>
 </template>
-
 <style scoped>
 .neon-bg-container {
     min-height: 100vh;

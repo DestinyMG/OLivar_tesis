@@ -55,40 +55,32 @@ const confirmarUsuario = async (item) => {
     if (!result.isConfirmed) return;
 
     try {
-        // 🛠 MAPEADO CORRECTO DE CAMPOS
-        // Según tu error 400, el backend de PERSONAS espera estos nombres:
+        // 🛠 MAPEADO CORRECTO DE CAMPOS (Incluyendo Email)
         const datosPersona = {
             nombre: item.nombre,
             apellido: item.apellido,
             ci: item.ci,
-            username: item.username, // Login envía 'username', asegúrate que el preregistro lo guarde así
+            email: item.email,        // <-- Agregado para la migración
+            username: item.username,
             rol: 'ESTUDIANTE',
             imagen: null,
-            // ⚠️ IMPORTANTE: Si el error decía PASSWORD en mayúsculas, lo ponemos así:
             password: item.password,
-            sub_programa_id: item.sub_programa_id // Login envía 'sub_programa_id'
+            sub_programa_id: item.sub_programa_id
         };
 
-        // Si te vuelve a salir el error de "Required", intenta este objeto alternativo:
-        // const datosPersonaAlt = {
-        //    ...datosPersona,
-        //    PASSWORD: item.password,
-        //    SUB_PROGRAMA_ID: item.sub_programa_id
-        // };
+        console.log("Migrando datos con email:", datosPersona.email);
 
-        console.log("Migrando datos de Preregistro a Persona:", datosPersona);
-
-        // 1. Crear la persona oficial
+        // 1. Crear la persona oficial en la API 1
         await axios.post(API_PERSONAS, datosPersona);
 
-        // 2. Si lo anterior funcionó, borrar el preregistro
+        // 2. Si lo anterior funcionó, borrar el preregistro de la API 2
         await axios.delete(`${API_PREREGISTROS}${item.id}/`);
 
         solicitudes.value = solicitudes.value.filter(s => s.id !== item.id);
 
         Swal.fire({
             title: '¡Usuario Registrado!',
-            text: 'El estudiante ya puede iniciar sesión.',
+            text: 'El estudiante ya puede iniciar sesión con su correo o usuario.',
             icon: 'success',
             background: '#0a0a10',
             color: '#fff'
@@ -96,8 +88,6 @@ const confirmarUsuario = async (item) => {
 
     } catch (error) {
         console.error('Error detallado:', error.response?.data);
-
-        // Esto nos dirá si el problema es que item.password o item.sub_programa_id llegaron vacíos
         const data = error.response?.data;
         let msg = "No se pudo procesar.";
         if (data) {
@@ -200,9 +190,14 @@ onMounted(fetchPreregistros);
                             <span class="text-[9px] text-gray-500 uppercase font-black tracking-widest">Cédula</span>
                             <span class="text-gray-200 text-xs font-bold tracking-tighter">{{ item.ci }}</span>
                         </div>
-                        <div class="flex justify-between items-center">
+                        <div class="flex flex-col gap-1">
+                            <span class="text-[9px] text-gray-500 uppercase font-black tracking-widest">Correo
+                                Electrónico</span>
+                            <span class="text-rose-400 text-[11px] font-medium truncate">{{ item.email }}</span>
+                        </div>
+                        <div class="flex flex-col gap-1">
                             <span class="text-[9px] text-gray-500 uppercase font-black tracking-widest">Programa</span>
-                            <span class="text-gray-200 text-[10px] font-bold text-right">{{ item.sub_programa }}</span>
+                            <span class="text-gray-200 text-[10px] font-bold">{{ item.sub_programa }}</span>
                         </div>
                     </div>
 

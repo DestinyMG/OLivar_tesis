@@ -3,7 +3,8 @@ from django.urls import path, include
 from .views import PersonaViewSet, SubProgramaViewSet, AuthTokenView  # 👈 agregamos AuthTokenView
 
 router = DefaultRouter()
-router.register(r'personas', PersonaViewSet)
+router.register(r'personas', PersonaViewSet, basename='personas')
+
 router.register(r'sub-programas', SubProgramaViewSet)
 
 urlpatterns = [

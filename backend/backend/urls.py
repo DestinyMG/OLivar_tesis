@@ -24,6 +24,7 @@ urlpatterns = [
     path('api1/', include('registros.urls')),  # <--- aquí
     path('api2/', include('preregistro.urls')),
     path('api3/', include('incidencias.urls')),
+    path('api4/notificaciones/', include('notificaciones.urls')),
 ]
 
 if settings.DEBUG:

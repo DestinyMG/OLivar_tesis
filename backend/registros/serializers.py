@@ -1,10 +1,8 @@
 from rest_framework import serializers
+from django.contrib.auth.hashers import check_password
 from .models import Persona, SubPrograma
 
 # registros/serializers.py
-from rest_framework import serializers
-from django.contrib.auth.hashers import check_password
-from .models import Persona
 
 class AuthSerializer(serializers.Serializer):
     username = serializers.CharField()
@@ -27,19 +25,22 @@ class SubProgramaSerializer(serializers.ModelSerializer):
         model = SubPrograma
         fields = '__all__'
 
+
 class PersonaSerializer(serializers.ModelSerializer):
     sub_programa = SubProgramaSerializer(read_only=True)
     sub_programa_id = serializers.PrimaryKeyRelatedField(
         queryset=SubPrograma.objects.all(),
         source='sub_programa',
         write_only=True,
-        required=False, # Lo hacemos opcional para que el PATCH de perfil no lo exija
+        required=False, 
         allow_null=True
     )
 
-    # 🔹 Ocultar password al leer, solo permitir escribir. 
-    # required=False permite actualizar el perfil sin cambiar la clave cada vez.
-    password = serializers.CharField(write_only=True, required=False)
+    # El campo email ahora es parte integral del serializador
+    email = serializers.EmailField(required=False, allow_blank=True)
+
+    # Ocultar password al leer, permitir escribir de forma opcional
+    password = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     class Meta:
         model = Persona
@@ -48,6 +49,7 @@ class PersonaSerializer(serializers.ModelSerializer):
             'nombre',
             'apellido',
             'ci',
+            'email',        # ✅ Campo agregado
             'rol',
             'username',
             'password',
@@ -56,18 +58,19 @@ class PersonaSerializer(serializers.ModelSerializer):
             'sub_programa_id',
         ]
 
-    # --- AQUÍ ESTÁ EL TRUCO PARA EL PERFIL ---
     def update(self, instance, validated_data):
         # 1. Extraemos el password si viene en la petición
         password = validated_data.pop('password', None)
         
-        # 2. Actualizamos los demás campos (nombre, apellido, imagen, etc.)
+        # 2. Actualizamos los demás campos (nombre, apellido, email, imagen, etc.)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         
-        # 3. Si el usuario envió una nueva contraseña, la encriptamos antes de guardar
+        # 3. Si hay un nuevo password, lo asignamos.
+        # Al llamar a instance.save(), el método save() de tu modelo Persona 
+        # detectará que no está hasheado y lo encriptará automáticamente.
         if password:
-            instance.set_password(password)
+            instance.password = password
             
         instance.save()
         return instance

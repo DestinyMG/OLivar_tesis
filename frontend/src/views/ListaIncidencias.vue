@@ -3,12 +3,111 @@ import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import BaseAdmin from '../components/BaseAdmin.vue';
+import { generarReportePDF } from '../utils/reporteService';
+import { ReporteInstitucional } from '../utils/ReporteInstitucional';
 
 const incidencias = ref([]);
 const loading = ref(true);
 const search = ref('');
 const incidenciaSeleccionada = ref(null);
 const mostrarHistorial = ref(false); // Control para mostrar historial
+
+const imprimirReporte = async () => {
+    // 1. Interfaz de selección de rango (Estilo Dark/Cyberpunk)
+    const { value: formValues } = await Swal.fire({
+        title: 'GENERAR REPORTE INSTITUCIONAL',
+        background: '#0a0a10',
+        color: '#fff',
+        html: `
+            <div class="flex flex-col gap-4 p-4 text-left">
+                <p class="text-rose-500 text-[10px] font-black uppercase tracking-widest">
+                    Seleccione el periodo académico a auditar
+                </p>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-[9px] font-black text-gray-500 uppercase">Fecha Inicial</label>
+                        <input id="swal-input1" type="date" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white mt-1 outline-none focus:border-rose-500/50">
+                    </div>
+                    <div>
+                        <label class="text-[9px] font-black text-gray-500 uppercase">Fecha Final</label>
+                        <input id="swal-input2" type="date" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white mt-1 outline-none focus:border-rose-500/50">
+                    </div>
+                </div>
+                <div class="mt-2 p-3 bg-rose-500/5 border border-rose-500/10 rounded-lg">
+                    <p class="text-[8px] text-rose-300 italic">
+                        * El reporte incluirá todas las incidencias (Resueltas, Abiertas y Rechazadas) del subprograma: ${usuarioSubPrograma}.
+                    </p>
+                </div>
+            </div>
+        `,
+        confirmButtonText: 'GENERAR DOCUMENTO',
+        confirmButtonColor: '#e11d48',
+        showCancelButton: true,
+        cancelButtonText: 'CANCELAR',
+        preConfirm: () => {
+            const f1 = document.getElementById('swal-input1').value;
+            const f2 = document.getElementById('swal-input2').value;
+            if (!f1 || !f2) {
+                Swal.showValidationMessage('Ambas fechas son obligatorias');
+            }
+            return [f1, f2];
+        }
+    });
+
+    // 2. Procesamiento de datos si el usuario confirmó
+    if (formValues) {
+        const [inicioStr, finStr] = formValues;
+
+        // Normalización de fechas para evitar desfases de zona horaria
+        const fInicio = new Date(inicioStr + 'T00:00:00');
+        const fFin = new Date(finStr + 'T23:59:59');
+
+        // Filtrado Global (Ignora los filtros visuales de la tabla de Vue)
+        const incidenciasParaReporte = incidencias.value.filter(i => {
+            const fechaInc = new Date(i.fecha_creacion);
+            const perteneceSub = i.persona?.sub_programa?.nombre === usuarioSubPrograma;
+            const estaEnRango = fechaInc >= fInicio && fechaInc <= fFin;
+
+            return perteneceSub && estaEnRango;
+        });
+
+        // 3. Validación de resultados
+        if (incidenciasParaReporte.length === 0) {
+            Swal.fire({
+                title: 'SIN REGISTROS',
+                text: 'No se encontraron incidencias en el periodo seleccionado.',
+                icon: 'warning',
+                background: '#0a0a10',
+                color: '#fff',
+                confirmButtonColor: '#e11d48'
+            });
+            return;
+        }
+
+        // 4. Llamada al Motor de Reporte Institucional
+        try {
+            const reporte = new ReporteInstitucional({
+                subprograma: usuarioSubPrograma,
+                periodo: { inicio: inicioStr, fin: finStr }
+            });
+
+            reporte.generar(incidenciasParaReporte);
+
+            Swal.fire({
+                title: '¡REPORTE CREADO!',
+                text: 'El documento PDF se ha generado correctamente.',
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false,
+                background: '#0a0a10',
+                color: '#fff'
+            });
+        } catch (error) {
+            console.error("Error al generar PDF:", error);
+            Swal.fire('Error', 'No se pudo generar el archivo PDF', 'error');
+        }
+    }
+};
 
 /* ----------------------------------
    DATOS DEL USUARIO
@@ -215,9 +314,11 @@ onMounted(fetchData);
                     Incidencias Operativas</p>
             </div>
 
+
+
             <div class="flex flex-col md:flex-row gap-4 items-center">
                 <!-- Botones de filtro para JEFE_SUB_PROGRAMA -->
-                <div v-if="usuarioRol === 'JEFE_SUB_PROGRAMA'" class="flex gap-2">
+                <div v-if="usuarioRol === 'JEFE_SUB_PROGRAMA'" class="flex flex-wrap gap-2">
                     <button @click="mostrarHistorial = false" :class="[
                         'px-4 py-2 rounded-xl text-[10px] font-black uppercase border transition-all',
                         !mostrarHistorial
@@ -243,7 +344,13 @@ onMounted(fetchData);
                             {{ contarIncidenciasHistorial }}
                         </span>
                     </button>
+
+                    <button @click="imprimirReporte"
+                        class="px-4 py-2 rounded-xl text-[10px] font-black uppercase border border-emerald-500/30 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white transition-all flex items-center gap-2">
+                        <span>🖨️</span> Imprimir Reporte
+                    </button>
                 </div>
+
 
                 <!-- Barra de búsqueda -->
                 <div class="relative max-w-md w-full">
@@ -255,21 +362,7 @@ onMounted(fetchData);
         </div>
 
         <!-- Indicador de vista actual -->
-        <div v-if="usuarioRol === 'JEFE_SUB_PROGRAMA'" class="mb-6">
-            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10">
-                <span class="text-[10px] font-black uppercase text-gray-400">
-                    Mostrando:
-                </span>
-                <span class="text-[10px] font-black uppercase text-rose-500">
-                    {{ mostrarHistorial ? 'Historial (Resueltas/Rechazadas)' : 'Incidencias Activas (Creadas/Abiertas)'
-                    }}
-                </span>
-                <span v-if="incidenciasFiltradas.length === 0"
-                    class="text-[8px] text-gray-500 font-black uppercase ml-4">
-                    No hay {{ mostrarHistorial ? 'incidencias en historial' : 'incidencias activas' }}
-                </span>
-            </div>
-        </div>
+
 
         <div v-if="loading" class="flex justify-center py-20">
             <div class="w-10 h-10 border-2 border-rose-500/20 border-t-rose-500 rounded-full animate-spin"></div>

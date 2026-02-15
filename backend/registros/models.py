@@ -21,6 +21,9 @@ class Persona(models.Model):
     nombre = models.CharField(max_length=100)
     apellido = models.CharField(max_length=100)
     ci = models.CharField(max_length=20, unique=True)
+    
+    # 📧 Nuevo campo agregado para que coincida con PreRegistro
+    email = models.EmailField(models.EmailField(max_length=255, null=True, blank=True))
 
     rol = models.CharField(
         max_length=20,
@@ -40,7 +43,7 @@ class Persona(models.Model):
         blank=True
     )
 
-    # 🔐 Nuevo: usuario y contraseña
+    # 🔐 Usuario y contraseña
     username = models.CharField(max_length=50, unique=True)
     password = models.CharField(max_length=128)
 

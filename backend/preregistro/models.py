@@ -12,6 +12,7 @@ class PreRegistro(models.Model):
     nombre = models.CharField(max_length=100)
     apellido = models.CharField(max_length=100)
     ci = models.CharField(max_length=20, unique=True)
+    email = models.EmailField(max_length=255, unique=True)  # <-- Campo agregado
     username = models.CharField(max_length=50, unique=True)
     password = models.CharField(max_length=128)
     sub_programa = models.ForeignKey(
@@ -25,7 +26,7 @@ class PreRegistro(models.Model):
         default='ESTUDIANTE'
     )
     imagen = models.ImageField(upload_to='preregistro/', null=True, blank=True)
-    fecha_creacion = models.DateTimeField(auto_now_add=True)  # opcional, para saber cuándo se registró
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
         # 🔹 Hashea la password automáticamente si no está hasheada
