@@ -373,11 +373,25 @@ onMounted(fetchData);
             <div v-for="inc in incidenciasFiltradas" :key="inc.id"
                 class="bg-[#050505] border border-white/5 rounded-3xl p-6 hover:border-rose-500/30 transition-all group relative overflow-hidden">
 
+                <span v-if="(usuarioRol === 'JEFE_SUB_PROGRAMA' && !inc.leido_por_jefe) ||
+                    (usuarioRol === 'ESTUDIANTE' && !inc.leido_por_estudiante)"
+                    class="absolute top-0 right-0 w-8 h-8 bg-rose-500/10 flex items-center justify-center rounded-bl-2xl border-b border-l border-rose-500/20 shadow-[inset_0_0_10px_rgba(225,29,72,0.1)]">
+                    <span class="w-2 h-2 bg-rose-500 rounded-full animate-pulse shadow-[0_0_10px_#e11d48]"></span>
+                </span>
+
                 <div class="flex justify-between items-start mb-6">
-                    <span
-                        class="text-[9px] font-black bg-white/5 text-gray-400 px-3 py-1 rounded-lg border border-white/5">
-                        #ID-{{ inc.id }}
-                    </span>
+                    <div class="flex items-center gap-2">
+                        <span
+                            class="text-[9px] font-black bg-white/5 text-gray-400 px-3 py-1 rounded-lg border border-white/5">
+                            #ID-{{ inc.id }}
+                        </span>
+
+                        <span v-if="(usuarioRol === 'JEFE_SUB_PROGRAMA' && !inc.leido_por_jefe) ||
+                            (usuarioRol === 'ESTUDIANTE' && !inc.leido_por_estudiante)"
+                            class="text-[8px] font-black text-rose-500 uppercase tracking-widest animate-bounce">
+                            ● Nuevo Mensaje
+                        </span>
+                    </div>
 
                     <div class="flex items-center gap-2">
                         <button v-if="usuarioRol === 'JEFE_SUB_PROGRAMA' && !mostrarHistorial"

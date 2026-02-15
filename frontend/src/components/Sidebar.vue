@@ -9,7 +9,6 @@ defineEmits(['close'])
 const route = useRoute()
 const totalPendientes = ref(0)
 
-// ✅ LEER datos desde localStorage
 const subProgramaJefe = ref(localStorage.getItem('usuario_sub_programa') || '')
 const rolUsuario = ref(localStorage.getItem('usuario_rol') || '')
 
@@ -17,7 +16,6 @@ const isActive = (path) => route.path === path
 
 const fetchCount = async () => {
     if (rolUsuario.value !== 'JEFE_SUB_PROGRAMA') return;
-
     try {
         const response = await axios.get('http://localhost:8000/api2/preregistros/')
         if (!subProgramaJefe.value) {
@@ -45,16 +43,22 @@ onMounted(() => {
 
 <template>
     <aside :class="[
-        'fixed inset-y-0 left-0 z-[150] w-72 bg-[#050505] border-r border-white/5 p-6 transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:flex lg:flex-col gap-8',
+        /* Clases Base: Usamos flex-col para poder usar el empujador flex-1 */
+        'fixed inset-y-0 left-0 z-[150] w-72 bg-[#050505] border-r border-white/5 p-6 transition-transform duration-300 ease-in-out flex flex-col',
+
+        /* Ajuste PC: sticky y top-20 para que no choque con el Navbar de 80px (h-20) */
+        'lg:sticky lg:top-20 lg:h-[calc(100vh-80px)] lg:translate-x-0 gap-6',
+
+        /* Estado Abierto/Cerrado */
         isOpen ? 'translate-x-0 shadow-[20px_0_50px_rgba(0,0,0,0.9)]' : '-translate-x-full'
     ]">
 
         <button @click="$emit('close')"
-            class="lg:hidden absolute top-5 right-5 w-8 h-8 flex items-center justify-center rounded-full bg-white/5 text-rose-500 border border-rose-500/20 hover:bg-rose-500 hover:text-white transition-colors">
+            class="lg:hidden absolute top-5 right-5 w-8 h-8 flex items-center justify-center rounded-full bg-white/5 text-rose-500 border border-rose-500/20 hover:bg-rose-500 hover:text-white transition-colors z-20">
             ✕
         </button>
 
-        <div class="space-y-2 mt-10 lg:mt-0">
+        <div class="space-y-2 mt-10 lg:mt-0 flex-shrink-0">
             <p
                 class="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em] mb-6 font-mono text-center lg:text-left italic">
                 {{ rolUsuario === 'ESTUDIANTE' ? 'Student Interface' : 'Management Console' }}
@@ -78,7 +82,7 @@ onMounted(() => {
                     </router-link>
 
                     <router-link to="/usuarios"
-                        :class="['group relative flex items-center gap-4 px-4 py-4 rounded-xl border transition-all duration-300', isActive('/usuarios') ? 'border-rose-500/30 text-rose-400 bg-rose-500/5 shadow-[0_10px_20px_rgba(225,29,72,0.1)]' : 'border-transparent text-gray-500 hover:text-white hover:bg-white/5']">
+                        :class="['group relative flex items-center gap-4 px-4 py-4 rounded-xl border transition-all duration-300', isActive('/usuarios') ? 'border-rose-500/30 text-rose-400 bg-rose-500/5 shadow-[0_10px_20px_rgba(225,29_72,0.1)]' : 'border-transparent text-gray-500 hover:text-white hover:bg-white/5']">
                         <span v-if="isActive('/usuarios')"
                             class="absolute left-0 top-0 w-1 h-full bg-rose-600 shadow-[0_0_15px_#e11d48]"></span>
                         <span class="text-xl">👥</span>
@@ -88,7 +92,7 @@ onMounted(() => {
                 </template>
 
                 <router-link to="/incidencias"
-                    :class="['group relative flex items-center gap-4 px-4 py-4 rounded-xl border transition-all duration-300', isActive('/incidencias') ? 'border-rose-500/30 text-rose-400 bg-rose-500/5 shadow-[0_10px_20px_rgba(225,29,72,0.1)]' : 'border-transparent text-gray-500 hover:text-white hover:bg-white/5']">
+                    :class="['group relative flex items-center gap-4 px-4 py-4 rounded-xl border transition-all duration-300', isActive('/incidencias') ? 'border-rose-500/30 text-rose-400 bg-rose-500/5 shadow-[0_10px_20px_rgba(225,29_72,0.1)]' : 'border-transparent text-gray-500 hover:text-white hover:bg-white/5']">
                     <span v-if="isActive('/incidencias')"
                         class="absolute left-0 top-0 w-1 h-full bg-rose-600 shadow-[0_0_15px_#e11d48]"></span>
                     <span class="text-xl">📊</span>
@@ -99,18 +103,21 @@ onMounted(() => {
                 </router-link>
 
                 <router-link v-if="rolUsuario === 'ESTUDIANTE'" to="/crear"
-                    :class="['group relative flex items-center gap-4 px-4 py-4 rounded-xl border transition-all duration-300', isActive('/crear-incidencia') ? 'border-rose-500/30 text-rose-400 bg-rose-500/5 shadow-[0_10px_20px_rgba(225,29,72,0.1)]' : 'border-transparent text-gray-500 hover:text-white hover:bg-white/5']">
-                    <span v-if="isActive('/crear-incidencia')"
+                    :class="['group relative flex items-center gap-4 px-4 py-4 rounded-xl border transition-all duration-300', isActive('/crear') ? 'border-rose-500/30 text-rose-400 bg-rose-500/5 shadow-[0_10px_20px_rgba(225,29_72,0.1)]' : 'border-transparent text-gray-500 hover:text-white hover:bg-white/5']">
+                    <span v-if="isActive('/crear')"
                         class="absolute left-0 top-0 w-1 h-full bg-rose-600 shadow-[0_0_15px_#e11d48]"></span>
                     <span class="text-xl">✍️</span>
                     <span class="text-xs font-black uppercase tracking-widest"
-                        :class="isActive('/crear-incidencia') ? 'text-white' : ''">Crear Solicitud</span>
+                        :class="isActive('/crear') ? 'text-white' : ''">Crear
+                        Solicitud</span>
                 </router-link>
             </nav>
         </div>
 
+        <div class="flex-1"></div>
+
         <div v-if="rolUsuario === 'JEFE_SUB_PROGRAMA'"
-            class="mt-auto p-5 rounded-2xl bg-[#0a0a0a] border border-white/5 relative overflow-hidden group">
+            class="p-5 rounded-2xl bg-white/[0.02] border border-white/5 relative overflow-hidden group mb-2">
             <div
                 class="absolute -right-4 -top-4 w-16 h-16 bg-rose-600/10 blur-2xl rounded-full group-hover:bg-rose-600/20 transition-all">
             </div>

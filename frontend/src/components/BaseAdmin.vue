@@ -3,13 +3,13 @@ import { ref } from 'vue';
 import Navbar from './Navbar.vue';
 import Sidebar from './Sidebar.vue';
 
-const isSidebarOpen = ref(false); // Estado del menú controlado desde aquí
+const isSidebarOpen = ref(false);
 </script>
 
 <template>
-    <div class="min-h-screen flex flex-col bg-[#030303] text-white font-sans selection:bg-rose-500/30">
+    <div class="h-screen flex flex-col bg-[#030303] text-white font-sans selection:bg-rose-500/30 overflow-hidden">
 
-        <div class="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+        <div class="fixed inset-0 z-0 pointer-events-none">
             <div class="absolute top-[-10%] left-[-5%] w-[500px] h-[500px] bg-rose-600/5 blur-[120px] rounded-full">
             </div>
             <div
@@ -17,21 +17,19 @@ const isSidebarOpen = ref(false); // Estado del menú controlado desde aquí
             </div>
         </div>
 
-        <Navbar @toggle-menu="isSidebarOpen = !isSidebarOpen" />
+        <Navbar class="flex-shrink-0 z-[160]" @toggle-menu="isSidebarOpen = !isSidebarOpen" />
 
-        <div class="flex flex-1 relative z-10 overflow-hidden">
+        <div class="flex flex-1 overflow-hidden relative z-10">
+            <Sidebar :isOpen="isSidebarOpen" @close="isSidebarOpen = false" class="flex-shrink-0" />
 
-            <Sidebar :isOpen="isSidebarOpen" @close="isSidebarOpen = false" />
-
-            <transition enter-active-class="transition-opacity duration-300 ease-linear" enter-from-class="opacity-0"
-                enter-to-class="opacity-100" leave-active-class="transition-opacity duration-200 ease-linear"
-                leave-from-class="opacity-100" leave-to-class="opacity-0">
+            <transition enter-active-class="transition-opacity duration-300"
+                leave-active-class="transition-opacity duration-200">
                 <div v-if="isSidebarOpen" @click="isSidebarOpen = false"
                     class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[140] lg:hidden"></div>
             </transition>
 
-            <main class="flex-1 overflow-y-auto p-4 md:p-8 lg:p-10 custom-scrollbar">
-                <div class="max-w-7xl mx-auto animate-[fade-up_0.6s_cubic-bezier(0.16,1,0.3,1)]">
+            <main class="flex-1 overflow-y-auto custom-scrollbar relative">
+                <div class="max-w-7xl mx-auto p-4 md:p-8 lg:p-10 animate-[fade-up_0.6s_ease-out]">
                     <slot />
                 </div>
             </main>
@@ -40,25 +38,7 @@ const isSidebarOpen = ref(false); // Estado del menú controlado desde aquí
 </template>
 
 <style>
-/* Estilizamos el scroll de manera global pero sin usar @apply para evitar líos */
-.custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #1f1f1f;
-    border-radius: 10px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #e11d48;
-}
-
-/* Definimos la animación clave de forma estándar de CSS */
+/* Animación de entrada */
 @keyframes fade-up {
     from {
         opacity: 0;
@@ -69,5 +49,23 @@ const isSidebarOpen = ref(false); // Estado del menú controlado desde aquí
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+/* Scrollbar global para que no se vea el de Windows feo */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #030303;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #1f1f1f;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #e11d48;
 }
 </style>

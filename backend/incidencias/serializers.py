@@ -44,19 +44,18 @@ class MensajeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Mensaje
-        fields = ['id', 'incidencia', 'texto', 'fecha', 'imagenes']
+        # 👇 Agregado 'autor_ci' para que Vue pueda enviarlo
+        fields = ['id', 'incidencia', 'autor_ci', 'texto', 'fecha', 'imagenes']
 
 # ------------------------------
 # Incidencia
 # ------------------------------
 class IncidenciaSerializer(serializers.ModelSerializer):
-    # Esto se queda igual para ver los datos del usuario
     persona = PersonaSerializer(read_only=True)
     
-    # 👇 AGREGA ESTA LÍNEA: Este campo recibirá el ID desde Vue
     persona_id = serializers.PrimaryKeyRelatedField(
         queryset=Persona.objects.all(),
-        source='persona', # <--- Esto le dice que guarde el ID en el campo 'persona' del modelo
+        source='persona', 
         write_only=True
     )
     
@@ -70,27 +69,32 @@ class IncidenciaSerializer(serializers.ModelSerializer):
         model = Incidencia
         fields = [
             'id',
-            'persona',       # Lectura
-            'persona_id',    # Escritura (ID)
+            'persona',
+            'persona_id',
             'tipo_incidencia',
             'descripcion',
             'estado',
             'fecha_creacion',
+            # 👇 NUEVOS CAMPOS: Para que Vue sepa si hay algo sin leer
+            'leido_por_jefe',
+            'leido_por_estudiante',
             'imagenes',
             'nuevas_imagenes',
             'mensajes'
         ]
 
     def create(self, validated_data):
-        # Ahora validated_data ya traerá el objeto 'persona' gracias a persona_id + source='persona'
         imagenes = validated_data.pop('nuevas_imagenes', [])
         incidencia = Incidencia.objects.create(**validated_data)
         
         for img in imagenes:
             IncidenciaImagen.objects.create(incidencia=incidencia, imagen=img)
         
+        # Al crear la incidencia, el sistema genera el primer mensaje
+        # Usamos la CI de la persona para que la señal sepa que es el mensaje inicial
         Mensaje.objects.create(
             incidencia=incidencia,
+            autor_ci=incidencia.persona.ci,
             texto="Incidencia creada. Inicie el chat aquí."
         )
         return incidencia
